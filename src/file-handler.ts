@@ -335,7 +335,23 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
         }
     });
 
-    events.function('scene.export', async (type: ExportType, outputFilename: string = null, exportType: 'export' | 'saveAs' = 'export', useFirebase = false) => {
+    events.function('scene.export', async (type: ExportType, outputFilename: string = null, exportType: 'export' | 'saveAs' | 'saveAndReturn' = 'export', useFirebase = false) => {
+        if (exportType === 'saveAndReturn') {
+            try {
+                const result = await events.invoke('scene.write', {
+                    type,
+                    filename: outputFilename,
+                    viewerExportSettings: { type: 'html', filename: 'index.html' }, // Default viewer settings
+                    useFirebase: true
+                });
+                if (typeof result === 'string') {
+                    window.location.href = `${remoteStorageDetails.url}/editor?sceneId=${result}`;
+                }
+            } catch (error) {
+                console.error('Save failed:', error);
+            }
+            return;
+        }
         const extensions = {
             'ply': '.ply',
             'compressed-ply': '.compressed.ply',

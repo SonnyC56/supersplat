@@ -37,6 +37,8 @@ export class FirebaseWriter implements Writer {
         this.chunks = [];
         this.totalLength = 0;
 
-        return url;
+        // Return both storage path and scene ID (filename without extension)
+        const sceneId = this.filename.replace(/\..+$/, '');
+        return `${url}|${sceneId}`;
     }
 }
