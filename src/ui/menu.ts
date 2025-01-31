@@ -3,6 +3,7 @@ import { Container, Element, Label } from 'pcui';
 import { Events } from '../events';
 import { localize } from './localization';
 import { MenuPanel } from './menu-panel';
+import { initializeFirebaseStorage } from '../firebase/storage';
 import arrowSvg from './svg/arrow.svg';
 import collapseSvg from './svg/collapse.svg';
 import selectDelete from './svg/delete.svg';
@@ -71,6 +72,11 @@ class Menu extends Container {
             class: 'menu-option'
         });
 
+        const returnToStorySplat = new Label({
+            text: 'Save & Return to StorySplat',
+            class: 'menu-option-storysplat'
+        });
+
         const toggleCollapsed = () => {
             document.body.classList.toggle('collapsed');
         };
@@ -93,9 +99,49 @@ class Menu extends Container {
         const buttonsContainer = new Container({
             id: 'menu-options-container'
         });
+
+        returnToStorySplat.dom.addEventListener('pointerdown', async (event: PointerEvent) => {
+            event.stopPropagation();
+            try {
+                // First save the current state
+                const saveResult = await events.invoke('doc.save');
+                if (!saveResult) {
+                    throw new Error('Failed to save document');
+                }
+
+                // Initialize Firebase storage
+                const storage = initializeFirebaseStorage();
+                if (!storage) {
+                    throw new Error('Failed to initialize Firebase storage');
+                }
+
+                // Get the current file as a blob
+                const currentFile = await events.invoke('doc.getFile');
+                if (!currentFile) {
+                    throw new Error('Failed to get current file');
+                }
+
+                // Upload to Firebase
+                const filename = events.invoke('doc.name');
+                console.log('Uploading file:', filename);
+                await storage.uploadSplat(currentFile, filename);
+
+                // Return to StorySplat
+                window.location.href = '/storysplat';
+            } catch (error) {
+                console.error('Error saving and returning to StorySplat:', error);
+                events.invoke('showPopup', {
+                    type: 'error',
+                    header: 'Error',
+                    message: 'Failed to save and upload the file. Please try again.'
+                });
+            }
+        });
+
         buttonsContainer.append(scene);
         buttonsContainer.append(selection);
         buttonsContainer.append(help);
+        buttonsContainer.append(returnToStorySplat);
         buttonsContainer.append(collapse);
         buttonsContainer.append(arrow);
 
