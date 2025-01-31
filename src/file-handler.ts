@@ -337,18 +337,31 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
 
     events.function('scene.export', async (type: ExportType, outputFilename: string = null, exportType: 'export' | 'saveAs' | 'saveAndReturn' = 'export', useFirebase = false) => {
         if (exportType === 'saveAndReturn') {
+            const params = new URLSearchParams(window.location.search);
+            const sceneId = params.get('sceneId');
+            const returnUrl = params.get('returnUrl');
+            if (!returnUrl) {
+                console.error('No return URL provided');
+                return;
+            }
+
+            events.fire('startSpinner');
             try {
-                const result = await events.invoke('scene.write', {
-                    type,
-                    filename: outputFilename,
-                    viewerExportSettings: { type: 'html', filename: 'index.html' }, // Default viewer settings
-                    useFirebase: true
-                });
-                if (typeof result === 'string') {
-                    window.location.href = `${remoteStorageDetails.url}/editor?sceneId=${result}`;
-                }
+                // Use FirebaseWriter which is already configured to use the correct bucket
+                const writer = new FirebaseWriter(outputFilename || 'scene.splat', firebaseStorage);
+                await serializeSplat(getSplats(), { maxSHBands: events.invoke('view.bands') }, writer);
+                // Progress updates are handled by the writer itself
+                const result = await writer.close();
+                window.location.href = `${decodeURIComponent(returnUrl)}?status=success&splatUrl=${result}|${sceneId}`;
             } catch (error) {
                 console.error('Save failed:', error);
+                events.fire('showPopup', {
+                    type: 'error',
+                    header: localize('popup.error-loading'),
+                    message: `${error.message ?? error} while saving file`
+                });
+            } finally {
+                events.fire('stopSpinner');
             }
             return;
         }

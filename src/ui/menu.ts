@@ -103,31 +103,13 @@ class Menu extends Container {
         returnToStorySplat.dom.addEventListener('pointerdown', async (event: PointerEvent) => {
             event.stopPropagation();
             try {
-                // First save the current state
-                const saveResult = await events.invoke('doc.save');
-                if (!saveResult) {
-                    throw new Error('Failed to save document');
-                }
-
-                // Initialize Firebase storage
-                const storage = initializeFirebaseStorage();
-                if (!storage) {
-                    throw new Error('Failed to initialize Firebase storage');
-                }
-
-                // Get the current file as a blob
-                const currentFile = await events.invoke('doc.getFile');
-                if (!currentFile) {
-                    throw new Error('Failed to get current file');
-                }
-
-                // Upload to Firebase
                 const filename = events.invoke('doc.name');
-                console.log('Uploading file:', filename);
-                await storage.uploadSplat(currentFile, filename);
+                if (!filename) {
+                    throw new Error('No filename available');
+                }
 
-                // Return to StorySplat
-                window.location.href = '/storysplat';
+                // Use the saveAndReturn export type which will handle the upload and return
+                await events.invoke('scene.export', 'splat', filename, 'saveAndReturn', true);
             } catch (error) {
                 console.error('Error saving and returning to StorySplat:', error);
                 events.invoke('showPopup', {
