@@ -10,7 +10,7 @@
     position: absolute;
     top: 24px;
     left: 24px;
-    width: 470px;
+    width: 320px;
     border-radius: 8px;
     overflow: hidden;
     background-color: $bcg-primary;
@@ -93,6 +93,11 @@
 .collapsed {
     #menu-bar {
         width: 90px;
+        height: 50px;
+    }
+
+    .menu-option-storysplat {
+        display: none;
     }
 
     #menu-collapse {
