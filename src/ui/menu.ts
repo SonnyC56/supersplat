@@ -141,12 +141,17 @@ class Menu extends Container {
         buttonsContainer.append(scene);
         buttonsContainer.append(selection);
         buttonsContainer.append(help);
-        buttonsContainer.append(returnToStorySplat);
         buttonsContainer.append(collapse);
         buttonsContainer.append(arrow);
 
-        menubar.append(icon);
-        menubar.append(buttonsContainer);
+        const topContainer = new Container({
+            id: 'menu-top-container'
+        });
+        topContainer.append(icon);
+        topContainer.append(buttonsContainer);
+
+        menubar.append(topContainer);
+        menubar.append(returnToStorySplat);
 
         const exportMenuPanel = new MenuPanel([{
             text: localize('file.export.ply'),
