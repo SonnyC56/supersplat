@@ -30,15 +30,15 @@ export class FirebaseWriter implements Writer {
         // Create a blob from the combined data
         const blob = new Blob([combined]);
 
-        // Upload to Firebase Storage
+        // Upload to Firebase Storage using the full filename/path
         const url = await this.storage.uploadSplat(blob, this.filename);
 
         // Clear the chunks array
         this.chunks = [];
         this.totalLength = 0;
 
-        // Return both storage path and scene ID (filename without extension)
-        const sceneId = this.filename.replace(/\..+$/, '');
+        // Use the full filename for the scene ID to maintain the path
+        const sceneId = this.filename;
         return `${url}|${sceneId}`;
     }
 }

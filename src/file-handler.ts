@@ -132,9 +132,9 @@ const loadCameraPoses = async (url: string, filename: string, events: Events) =>
 };
 
 // initialize file handler events
-const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, remoteStorageDetails: RemoteStorageDetails) => {
+const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLElement, remoteStorageDetails: RemoteStorageDetails) => {
     // Initialize Firebase storage if available
-    const firebaseStorage = initializeFirebaseStorage();
+    const firebaseStorage = await initializeFirebaseStorage();
 
     // returns a promise that resolves when the file is loaded
     const handleImport = async (url: string, filename?: string, focusCamera = true, animationFrame = false) => {
@@ -144,15 +144,12 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
                 try {
                     const urlObj = new URL(url);
                     const pathParts = urlObj.pathname.split('/');
-                    // Look for the splats directory in the path
-                    const splatsIndex = pathParts.findIndex(part => part === 'splats');
-                    if (splatsIndex !== -1 && splatsIndex < pathParts.length - 1) {
-                        filename = pathParts[splatsIndex + 1];
-                    } else {
-                        filename = pathParts[pathParts.length - 1];
-                    }
+                    // Get just the filename without any path
+                    filename = pathParts[pathParts.length - 1];
                     // Remove any query parameters
                     filename = filename.split('?')[0];
+                    // Decode any URL encoding
+                    filename = decodeURIComponent(filename);
                 } catch (e) {
                     filename = url;
                 }
@@ -165,6 +162,8 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
                 const model = await scene.assetLoader.loadModel({ url, filename, animationFrame });
                 scene.add(model);
                 if (focusCamera) scene.camera.focus();
+                // Set the document name when loading a splat file
+                events.fire('doc.setName', filename);
                 return model;
             } else {
                 throw new Error('Unsupported file type');
@@ -347,8 +346,13 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
 
             events.fire('startSpinner');
             try {
+                // Get the current document name or use a default
+                const docName = events.invoke('doc.name');
+                if (!docName) {
+                    throw new Error('No filename available');
+                }
                 // Use FirebaseWriter which is already configured to use the correct bucket
-                const writer = new FirebaseWriter(outputFilename || 'scene.splat', firebaseStorage);
+                const writer = new FirebaseWriter(docName, firebaseStorage);
                 await serializeSplat(getSplats(), { maxSHBands: events.invoke('view.bands') }, writer);
                 // Progress updates are handled by the writer itself
                 const result = await writer.close();
@@ -468,8 +472,13 @@ const initFileHandler = (scene: Scene, events: Events, dropTarget: HTMLElement, 
             const { stream, filename, type, viewerExportSettings, useFirebase } = options;
             let writer: Writer;
 
-            if (useFirebase && firebaseStorage) {
-                writer = new FirebaseWriter(filename, firebaseStorage);
+            if (useFirebase) {
+                const storage = await initializeFirebaseStorage();
+                if (storage) {
+                    writer = new FirebaseWriter(filename, storage);
+                } else {
+                    throw new Error('Failed to initialize Firebase storage');
+                }
             } else if (stream) {
                 writer = new FileStreamWriter(stream);
             } else {
