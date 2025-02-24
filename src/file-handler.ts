@@ -338,12 +338,6 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
         if (exportType === 'saveAndReturn') {
             const params = new URLSearchParams(window.location.search);
             const sceneId = params.get('sceneId');
-            const returnUrl = params.get('returnUrl');
-            if (!returnUrl) {
-                console.error('No return URL provided');
-                return;
-            }
-
             events.fire('startSpinner');
             try {
                 // Get the current document name or use a default
@@ -356,7 +350,8 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
                 await serializeSplat(getSplats(), { maxSHBands: events.invoke('view.bands') }, writer);
                 // Progress updates are handled by the writer itself
                 const result = await writer.close();
-                window.location.href = `${decodeURIComponent(returnUrl)}?status=success&splatUrl=${result}|${sceneId}`;
+                // send a post message to the parent window that closes the iframe this is in
+                window.parent.postMessage({ type: 'saveAndReturnToStorySplat', url: result }, '*');
             } catch (error) {
                 console.error('Save failed:', error);
                 events.fire('showPopup', {

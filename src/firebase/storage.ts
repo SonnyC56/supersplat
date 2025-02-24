@@ -1,5 +1,5 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, User, browserLocalPersistence, setPersistence } from 'firebase/auth';
+import { getAuth, browserLocalPersistence, setPersistence } from 'firebase/auth';
 import { getStorage, ref, uploadBytes, getDownloadURL, StorageReference } from 'firebase/storage';
 
 export interface FirebaseConfig {
@@ -16,16 +16,12 @@ export class FirebaseStorageManager {
     private storage;
     private auth;
     private userId: string;
-    private authToken?: string;
 
-    constructor(config: FirebaseConfig, userId: string, token?: string) {
+    constructor(config: FirebaseConfig, userId: string) {
         const app = initializeApp(config, 'supersplat-editor');
         this.storage = getStorage(app);
         this.auth = getAuth(app);
         this.userId = userId;
-
-        // Store the token if provided
-        this.authToken = token;
 
         // Initialize auth with persistence
         setPersistence(this.auth, browserLocalPersistence).catch((error) => {
@@ -42,28 +38,13 @@ export class FirebaseStorageManager {
 
     async uploadSplat(file: File | Blob, filename: string): Promise<string> {
         try {
-            // Wait for authentication if no token is provided
-            if (!this.authToken) {
-                await new Promise<void>((resolve, reject) => {
-                    const unsubscribe = this.auth.onAuthStateChanged((user) => {
-                        unsubscribe();
-                        if (user && user.uid === this.userId) {
-                            resolve();
-                        } else {
-                            reject(new Error('Authentication failed. Please ensure you are logged in.'));
-                        }
-                    });
-                });
-            }
 
-            // Upload file with authentication metadata
+            // Wait for authentication
+            await this.waitForAuth();
+
+            // Upload file
             const splatRef = this.getSplatRef(filename);
-            const metadata = this.authToken ? {
-                customMetadata: {
-                    authToken: this.authToken
-                }
-            } : undefined;
-            await uploadBytes(splatRef, file, metadata);
+            await uploadBytes(splatRef, file);
             return await getDownloadURL(splatRef);
         } catch (error) {
             console.error('Error uploading splat:', error);
@@ -86,12 +67,7 @@ export class FirebaseStorageManager {
 
     // Public method to check authentication
     async waitForAuth(): Promise<void> {
-        if (this.authToken) {
-            // Token is available, no need to wait for auth state
-            return;
-        }
-
-        // Fall back to checking auth state
+        // checking auth state
         await new Promise<void>((resolve, reject) => {
             const timeout = setTimeout(() => {
                 reject(new Error('Authentication timeout'));
@@ -100,7 +76,7 @@ export class FirebaseStorageManager {
             const unsubscribe = this.auth.onAuthStateChanged((user) => {
                 clearTimeout(timeout);
                 unsubscribe();
-                if (user?.uid !== this.userId) {
+                if (!user) {
                     reject(new Error('Authentication failed. Please ensure you are logged in.'));
                 }
                 resolve();
@@ -108,8 +84,6 @@ export class FirebaseStorageManager {
         });
     }
 }
-
-// Parse URL parameters to get Firebase config and user ID
 export function getFirebaseParams(): { config: FirebaseConfig; userId: string; token?: string } | null {
     try {
         const params = new URLSearchParams(window.location.search);
@@ -133,15 +107,19 @@ export function getFirebaseParams(): { config: FirebaseConfig; userId: string; t
         return null;
     }
 }
-
 // Initialize Firebase storage with URL parameters
-export async function initializeFirebaseStorage(): Promise<FirebaseStorageManager | null> {
+export function initializeFirebaseStorage(): FirebaseStorageManager {
     const params = getFirebaseParams();
-    if (!params) return null;
+    const config = params.config;
+    const userId = params.userId;
+
+    if (!config || !userId) {
+        console.error('Missing required Firebase parameters');
+        return null;
+    }
 
     try {
-        const manager = new FirebaseStorageManager(params.config, params.userId, params.token);
-        await manager.waitForAuth();
+        const manager = new FirebaseStorageManager(config, userId);
         return manager;
     } catch (error) {
         console.error('Error initializing Firebase storage:', error);

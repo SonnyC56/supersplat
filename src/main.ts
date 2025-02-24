@@ -21,7 +21,10 @@ import { ScaleTool } from './tools/scale-tool';
 import { SphereSelection } from './tools/sphere-selection';
 import { ToolManager } from './tools/tool-manager';
 import { registerTransformHandlerEvents } from './transform-handler';
+// eslint-disable-next-line import/order
 import { EditorUI } from './ui/editor';
+// import { LocalStorageManager } from './local-storage';
+
 
 declare global {
     interface LaunchParams {
@@ -93,6 +96,30 @@ const initShortcuts = (events: Events) => {
 
     return shortcuts;
 };
+
+class LocalStorageManager {
+    private storage: Storage;
+
+    constructor() {
+        this.storage = window.localStorage;
+    }
+
+    public setItem(key: string, value: string): void {
+        this.storage.setItem(key, value);
+    }
+
+    public getItem(key: string): string | null {
+        return this.storage.getItem(key);
+    }
+
+    public removeItem(key: string): void {
+        this.storage.removeItem(key);
+    }
+
+    public clear(): void {
+        this.storage.clear();
+    }
+}
 
 const main = async () => {
     // root events object
@@ -250,13 +277,15 @@ const main = async () => {
     registerPublishEvents(events);
     registerDocEvents(scene, events);
     initShortcuts(events);
-    initFileHandler(scene, events, editorUI.appContainer.dom, remoteStorageDetails);
+    await initFileHandler(scene, events, editorUI.appContainer.dom, remoteStorageDetails);
 
     // load async models
     scene.start();
 
     // handle load params and splatUrl
     const loadList = url.searchParams.getAll('load');
+
+    console.log('loadList', loadList);
 
     for (const value of loadList) {
         await events.invoke('import', decodeURIComponent(value));
@@ -273,6 +302,9 @@ const main = async () => {
             }
         });
     }
+
+    // Request Firebase config from parent
+    window.parent.postMessage({ type: 'requestFirebaseConfig' }, '*');
 };
 
 export { main };
