@@ -11,7 +11,6 @@ import sceneExport from './svg/export.svg';
 import sceneImport from './svg/import.svg';
 import sceneNew from './svg/new.svg';
 import sceneOpen from './svg/open.svg';
-import logoSvg from './svg/playcanvas-logo.svg';
 import scenePublish from './svg/publish.svg';
 import sceneSave from './svg/save.svg';
 import selectAll from './svg/select-all.svg';
@@ -42,19 +41,8 @@ class Menu extends Container {
             id: 'menu-bar'
         });
 
-        menubar.dom.addEventListener('pointerdown', (event) => {
+        menubar.dom.addEventListener('pointerdown', (event: any) => {
             event.stopPropagation();
-        });
-
-        const iconDom = document.createElement('img');
-        iconDom.src = logoSvg;
-        iconDom.setAttribute('id', 'app-icon');
-        iconDom.addEventListener('pointerdown', (event) => {
-            window.open('https://playcanvas.com', '_blank').focus();
-        });
-
-        const icon = new Element({
-            dom: iconDom
         });
 
         const scene = new Label({
@@ -129,7 +117,16 @@ class Menu extends Container {
         const topContainer = new Container({
             id: 'menu-top-container'
         });
-        topContainer.append(icon);
+        
+        // Add a placeholder element to maintain layout
+        const placeholderIcon = new Element({
+            dom: document.createElement('div')
+        });
+        placeholderIcon.dom.setAttribute('id', 'app-icon');
+        placeholderIcon.dom.style.width = '54px';
+        placeholderIcon.dom.style.height = '50px';
+        
+        topContainer.append(placeholderIcon);
         topContainer.append(buttonsContainer);
 
         menubar.append(topContainer);

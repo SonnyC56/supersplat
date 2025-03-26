@@ -9,7 +9,6 @@ import { ColorPanel } from './color-panel';
 import { localize, localizeInit } from './localization';
 import { Menu } from './menu';
 import { ModeToggle } from './mode-toggle';
-import logo from './playcanvas-logo.png';
 import { Popup, ShowOptions } from './popup';
 import { PublishSettingsDialog } from './publish-settings-dialog';
 import { RightToolbar } from './right-toolbar';
@@ -33,12 +32,6 @@ class EditorUI {
 
     constructor(events: Events, remoteStorageMode: boolean) {
         localizeInit();
-
-        // favicon
-        const link = document.createElement('link');
-        link.rel = 'icon';
-        link.href = logo;
-        document.head.appendChild(link);
 
         // app
         const appContainer = new Container({
@@ -67,7 +60,7 @@ class EditorUI {
         // app label
         const appLabel = new Label({
             id: 'app-label',
-            text: `SUPERSPLAT v${version}`
+            text: ``
         });
 
         // cursor label
@@ -203,7 +196,7 @@ class EditorUI {
             return this.popup.show({
                 type: 'info',
                 header: 'About',
-                message: `SUPERSPLAT v${version}`
+                message: ``
             });
         });
 
