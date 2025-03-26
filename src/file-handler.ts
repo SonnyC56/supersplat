@@ -338,20 +338,42 @@ const initFileHandler = async (scene: Scene, events: Events, dropTarget: HTMLEle
         if (exportType === 'saveAndReturn') {
             const params = new URLSearchParams(window.location.search);
             const sceneId = params.get('sceneId');
+            const originalPath = params.get('originalPath');
+            
             events.fire('startSpinner');
             try {
                 // Get the current document name or use a default
-                const docName = events.invoke('doc.name');
+                let docName = events.invoke('doc.name');
                 if (!docName) {
+                // If no document name is available, try to use the original path
+                if (originalPath) {
+                    // Decode the path first if it's URL-encoded
+                    const decodedPath = decodeURIComponent(originalPath);
+                    // Extract just the filename from the path
+                    const pathParts = decodedPath.split('/');
+                    docName = pathParts[pathParts.length - 1];
+                } else {
                     throw new Error('No filename available');
                 }
+                }
+                
+                console.log(`Saving file with name: ${docName}, using originalPath: ${originalPath}`);
+                
                 // Use FirebaseWriter which is already configured to use the correct bucket
+                // The FirebaseWriter will use the originalPath if available
                 const writer = new FirebaseWriter(docName, firebaseStorage);
                 await serializeSplat(getSplats(), { maxSHBands: events.invoke('view.bands') }, writer);
+                
                 // Progress updates are handled by the writer itself
                 const result = await writer.close();
+                
                 // send a post message to the parent window that closes the iframe this is in
-                window.parent.postMessage({ type: 'saveAndReturnToStorySplat', url: result }, '*');
+                window.parent.postMessage({ 
+                    type: 'saveAndReturnToStorySplat', 
+                    url: result 
+                }, '*');
+                
+                console.log('Save and return completed successfully');
             } catch (error) {
                 console.error('Save failed:', error);
                 events.fire('showPopup', {
