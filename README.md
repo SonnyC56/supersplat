@@ -1,51 +1,58 @@
-# SuperSplat - 3D Gaussian Splat Editor
+# SuperSplat Firebase Authentication
 
-| [SuperSplat Editor](https://playcanvas.com/supersplat/editor) | [User Guide](https://github.com/playcanvas/supersplat/wiki) | [Forum](https://forum.playcanvas.com/) | [Discord](https://discord.gg/RSaMRzg) |
+This document explains how the SuperSplat editor authenticates with Firebase and uploads edited models back to the original storage location.
 
-SuperSplat is a free and open source tool for inspecting, editing, optimizing and publishing 3D Gaussian Splats. It is built on web technologies and runs in the browser, so there's nothing to download or install.
+## Overview
 
-A live version of this tool is available at: https://playcanvas.com/supersplat/editor
+The StorySplat application passes a Firebase authentication token to the SuperSplat editor via URL parameters. This token is used by SuperSplat to authenticate with Firebase and upload edited models directly back to the original storage location.
 
-![image](https://github.com/user-attachments/assets/b6cbb5cc-d3cc-4385-8c71-ab2807fd4fba)
+## Authentication Flow
 
-To learn more about using SuperSplat, please refer to the [User Guide](https://github.com/playcanvas/supersplat/wiki).
+1. When a user clicks "Edit Splat" in StorySplat, the SuperSplatLauncher component:
+   - Generates a Firebase ID token from the authenticated user
+   - Extracts the original file path from the model URL
+   - Passes these values to SuperSplat via URL parameters
 
-## Local Development
+2. SuperSplat then:
+   - Extracts the authentication token and original path from URL parameters
+   - Uses the token to authenticate with Firebase
+   - When saving, uploads the edited model directly to the original path in Firebase Storage
 
-To initialize a local development environment for SuperSplat, ensure you have [Node.js](https://nodejs.org/) 18 or later installed. Follow these steps:
+## Implementation Details
 
-1. Clone the repository:
+### URL Parameters
 
-   ```sh
-   git clone https://github.com/playcanvas/supersplat.git
-   cd supersplat
-   ```
+SuperSplat receives the following parameters from StorySplat:
 
-2. Install dependencies:
+- `config`: Firebase configuration (JSON string)
+- `userId`: The user's Firebase UID
+- `authToken`: Firebase ID token for authentication
+- `originalPath`: The original path of the file in Firebase Storage
+- `load`: URL of the model to load
+- `sceneId`: Optional scene ID
 
-   ```sh
-   npm install
-   ```
+### Authentication
 
-3. Build SuperSplat and start a local web server:
+The `FirebaseStorageManager` class in `src/firebase/storage.ts` handles authentication with Firebase using the provided token. It uses the Firebase Auth REST API to authenticate with the ID token.
 
-   ```sh
-   npm run develop
-   ```
+### File Upload
 
-4. Open a web browser at `http://localhost:3000`.
+When saving a file with the "Save and Return" option, SuperSplat:
 
-When changes to the source are detected, SuperSplat is rebuilt automatically. Simply refresh your browser to see your changes.
+1. Uses the `FirebaseWriter` class to handle the upload
+2. The writer uses the original path from URL parameters to overwrite the original file
+3. After successful upload, it sends a postMessage to StorySplat with the new download URL
 
-When running your local build of SuperSplat in Chrome, we recommend you have the Developer Tools panel open. Also:
+## Troubleshooting
 
-1. Visit the Network tab and check `Disable cache`.
-2. Visit the Application tab, select `Service workers` on the left and then check `Update on reload` and `Bypass for network`. 
+If authentication or uploads fail, check the browser console for detailed error messages. Common issues include:
 
-## Contributors
+- Expired authentication token (tokens typically expire after 1 hour)
+- Incorrect storage path
+- Insufficient permissions in Firebase Storage rules
 
-SuperSplat is made possible by our amazing open source community:
+## Security Considerations
 
-<a href="https://github.com/playcanvas/supersplat/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=playcanvas/supersplat" />
-</a>
+- The Firebase ID token is short-lived (typically 1 hour), providing good security
+- Firebase Storage rules should be configured to allow authenticated users to write only to their own files
+- Origin validation is implemented for postMessage communication
