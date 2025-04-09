@@ -81,15 +81,31 @@
     text-overflow: clip;
     color: $text-primary;
     background-color: #4caf50;
-    border-radius: 0 0 8px 8px;
+    border-radius: 0 0 0px 8px;
     cursor: pointer;
+    width: 100%;
 
     &:hover {
         color: $text-primary;
         background-color: #265628;
     }
 }
+.menu-option-danger {
+    padding: 16px 20px;
+    margin: 0px;
+    text-align: center;
+    text-overflow: clip;
+    color: $text-primary;
+    background-color: #cc2f2f;
+    border-radius: 0 0 8px 0px;
+    cursor: pointer;
+    width: 50%;
 
+    &:hover {
+        color: $text-primary;
+        background-color: #531811;
+    }
+}
 .collapsed {
     #menu-bar {
         width: 90px;

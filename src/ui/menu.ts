@@ -65,6 +65,14 @@ class Menu extends Container {
             class: 'menu-option-storysplat'
         });
 
+        const returnWithoutSaving = new Label({
+            text: 'Exit',
+            class: 'menu-option-danger' // Assign primary class here
+        });
+        // Add the danger class separately
+        returnWithoutSaving.dom.classList.add('menu-option-danger');
+        // Remove direct color style, rely on CSS class
+
         const toggleCollapsed = () => {
             document.body.classList.toggle('collapsed');
         };
@@ -108,6 +116,12 @@ class Menu extends Container {
             }
         });
 
+        returnWithoutSaving.dom.addEventListener('pointerdown', (event: PointerEvent) => {
+            event.stopPropagation();
+            // Send a message to the parent window (StorySplat) to close the editor
+            window.parent.postMessage({ type: 'closeEditor' }, window.location.origin);
+        });
+
         buttonsContainer.append(scene);
         buttonsContainer.append(selection);
         buttonsContainer.append(help);
@@ -129,8 +143,20 @@ class Menu extends Container {
         topContainer.append(placeholderIcon);
         topContainer.append(buttonsContainer);
 
+        // Create a container for the return buttons
+        const returnButtonsContainer = new Container({
+            id: 'menu-return-buttons-container'
+        });
+        returnButtonsContainer.dom.style.display = 'flex'; // Arrange buttons inline
+        returnButtonsContainer.dom.style.alignItems = 'center'; // Vertically align items
+
+        // Add buttons to the inline container
+        returnButtonsContainer.append(returnToStorySplat); // Save & Return on the left
+        returnButtonsContainer.append(returnWithoutSaving); // Return w/o Saving on the right
+
         menubar.append(topContainer);
-        menubar.append(returnToStorySplat);
+        menubar.append(returnButtonsContainer); // Add the container with both buttons
+
 
         const exportMenuPanel = new MenuPanel([{
             text: localize('file.export.ply'),

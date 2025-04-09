@@ -43,8 +43,28 @@ self.addEventListener('activate', () => {
 });
 
 self.addEventListener('fetch', (event) => {
-    event.respondWith(
-        caches.match(event.request)
-        .then(response => response ?? fetch(event.request))
-    );
+    const requestUrl = new URL(event.request.url);
+
+    // Strategy: Network Falling Back to Cache for CSS and JS
+    if (requestUrl.pathname.endsWith('/index.css') || requestUrl.pathname.endsWith('/index.js')) {
+        event.respondWith(
+            fetch(event.request).then((networkResponse) => {
+                // If fetch is successful, clone the response, cache it, and return it
+                const responseClone = networkResponse.clone();
+                caches.open(cacheName).then((cache) => {
+                    cache.put(event.request, responseClone);
+                });
+                return networkResponse;
+            }).catch(() => {
+                // If fetch fails (e.g., offline), try to get it from the cache
+                return caches.match(event.request);
+            })
+        );
+    } else {
+        // Strategy: Cache First for all other requests (HTML, images, etc.)
+        event.respondWith(
+            caches.match(event.request)
+            .then(response => response ?? fetch(event.request))
+        );
+    }
 });
